@@ -1,0 +1,70 @@
+Pizza orders
+PART 1
+-------
+
+
+
+-- How many pizzas were ordered?
+-- SELECT
+-- 	COUNT(order_id) AS orders
+-- FROM pizza_runner.customer_orders
+--14
+
+--How many unique customer orders were made?
+
+-- SELECT
+-- 	COUNT(distinct order_id) AS orders
+-- FROM pizza_runner.customer_orders
+-- 10
+
+-- How many successful orders were delivered by each runner?
+-- SELECT runner_id,count(order_id) FROM pizza_runner.runner_orders_cleaned WHERE distance >0
+-- GROUP BY 1 
+-- Order by 2 desc
+
+-- How many Vegetarian and Meatlovers were ordered by each customer?
+-- SELECT customer_id,pizza_name,count(order_id) FROM pizza_runner.customer_orders_cleaned co
+-- JOIN pizza_runner.pizza_names p ON co.pizza_id=p.pizza_id
+-- GROUP BY 1,2
+-- ORDER BY 1
+
+-- How many of each type of pizza was delivered?
+-- SELECT pizza_name,count(order_id) FROM pizza_runner.customer_orders_cleaned co
+-- JOIN pizza_runner.pizza_names p ON co.pizza_id=p.pizza_id
+-- GROUP BY 1
+-- ORDER BY 1
+
+--What was the maximum number of pizzas delivered in a single order?
+-- WITH pizza as(
+-- SELECT co.order_id,count(customer_id) as number_of_pizzas FROM pizza_runner.customer_orders_cleaned co
+-- JOIN pizza_runner.runner_orders p ON co.order_id=p.order_id
+-- GROUP BY 1
+-- )
+-- SELECT MAX(number_of_pizzas)
+-- FROM pizza 
+
+-- For each customer, how many delivered pizzas had at least 1 change and how many had no changes?
+
+-- SELECT 
+-- customer_id,
+-- COUNT(CASE 
+-- 	WHEN exclusions !='0' THEN 1 ELSE NULL 
+-- END) AS change,
+-- COUNT(CASE 
+-- 	WHEN exclusions ='0' THEN 1 ELSE NULL 
+-- END) as no_change
+-- FROM pizza_runner.runner_orders ro JOIN pizza_runner.customer_orders_cleaned co ON ro.order_id = co.order_id
+-- GROUP BY 1 
+
+
+-- How many pizzas were delivered that had both exclusions and extras?
+-- SELECT 
+-- COUNT(co.order_id) as total_exclusion_extras_pizza
+-- FROM pizza_runner.runner_orders ro JOIN pizza_runner.customer_orders_cleaned co ON ro.order_id = co.order_id
+-- WHERE exclusions is NOT NULL AND extras is NOT NULL 
+
+
+-- What was the total volume of pizzas ordered for each hour of the day?
+-- SELECT EXTRACT(hour FROM order_time) as hour,count(order_id) FROM pizza_runner.customer_orders group by 1 order by 1
+-- What was the volume of orders for each day of the week?
+-- SELECT to_char(order_time, 'Day') as days,count(order_id) FROM pizza_runner.customer_orders group by 1 order by 2

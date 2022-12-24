@@ -1,88 +1,106 @@
-FOODIE FI CASE STUDY 3
------------------------
+                                                                    FOODIE FI CASE STUDY 3
+                                                                 -----------------------------
+                                                                    B. Data Analysis Questions
 
-1.
-How many customers has Foodie-Fi ever had?
+Q1. How many customers has Foodie-Fi ever had?
 
 SELECT count(distinct customer_id) FROM foodie_fi.subscriptions;
-count
-1000
 
-2.
-What is the monthly distribution of trial plan start_date values for our dataset - use the start of the month as the group by value
+  -------
+   count
+  ------
+   1000
 
-SELECT to_char(start_date,'Month'),count(customer_id)
+2. What is the monthly distribution of trial plan start_date values for our dataset - use the start of the month as the group by value
+
+SELECT to_char(start_date,'Month') as Month,count(customer_id)
 FROM foodie_fi.subscriptions 
 where plan_id=0 
 GROUP BY to_char(start_date,'Month') order by 2 desc;
 
-to_char	count
-March	94
-July	89
-August	88
-May	88
-January	88
-September	87
-December	84
-April	81
-June	79
-October	79
-November	75
-February	68
+Month	     Count
+-----------------
+March	      94
+July	      89
+August	    88
+May	        88
+January	    88
+September	  87
+December	  84
+April	      81
+June	      79
+October	    79
+November	  75
+February	  68
+--------------
 
 
 3.What plan start_date values occur after the year 2020 for our dataset? Show the breakdown by count of events for each plan_name
 
 SELECT plan_id,count(customer_id) FROM foodie_fi.subscriptions WHERE to_char(start_date,'YYYY')<>'2020' GROUP BY 1 order by 1;
-plan_id	count
-1	8
-2	60
-3	63
-4	71
+
+ plan_id	   count
+----------------
+  1	        8
+  2	        60
+  3	        63
+  4	        71
 
 
 
 4.What is the customer count and percentage of customers who have churned rounded to 1 decimal place?
 
-WITH CTE AS(  
-SELECT COUNT(customer_id) as churn_customer FROM foodie_fi.subscriptions WHERE plan_id=4
-  )
-  SELECT churn_customer,ROUND((churn_customer*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),1) FROM CTE
+WITH CTE AS
+(  
+SELECT 
+  COUNT(customer_id) as churn_customer
+FROM foodie_fi.subscriptions
+  WHERE plan_id=4
+)
+SELECT 
+  churn_customer,
+  ROUND((churn_customer*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),1)
+FROM CTE
 
 customer_count churn_perc
-307					30.7
+-------------------------
+307					      30.7
 
-5.
-How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?
 
-WITH CTE AS(
+5.How many customers have churned straight after their initial free trial - what percentage is this rounded to the nearest whole number?
+
+WITH CTE AS
+(
+  SELECT
+      *,
+      LEAD(plan_id) OVER(partition by customer_id order by start_date) as next_plan
+  FROM foodie_fi.subscriptions
+)
+SELECT 
+  ROUND((count(*)*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),2)
+FROM CTE 
+  WHERE plan_id=0 AND next_plan=4 
+
+
+6. What is the number and percentage of customer plans after their initial free trial?
+
+First Way:
+
+WITH CTE AS
+(
 SELECT
 *,LEAD(plan_id) OVER(partition by customer_id order by start_date) as next_plan
 FROM foodie_fi.subscriptions
-  )
-SELECT ROUND((
-  count(*)*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),2)  FROM CTE where plan_id=0 and next_plan=4 
-
-
-6.
-
--- What is the number and percentage of customer plans after their initial free trial?
-
-WITH CTE AS(
-SELECT
-*,LEAD(plan_id) OVER(partition by customer_id order by start_date) as next_plan
-FROM foodie_fi.subscriptions
-  ),
-count_cost AS(SELECT 
-COUNT(CASE WHEN plan_id=0 and next_plan=1
-THEN 1 ELSE NULL END) AS basic,
-COUNT(CASE WHEN plan_id IN(0,1) and next_plan=2
-THEN 1 ELSe NULL END) AS pro,
-COUNT(CASE WHEN plan_id IN (0,1,2) and next_plan=3
-THEN 1 ELSe NULL END) AS pro_anm,
-COUNT(CASE WHEN plan_id IN(0,1,2,3) and next_plan=4
-THEN 1 ELSe NULL END) AS churn
-FROM CTE)
+),
+count_cost AS
+(
+SELECT 
+  COUNT(CASE WHEN plan_id=0 and next_plan=1 THEN 1 ELSE NULL END) AS basic,
+  COUNT(CASE WHEN plan_id IN(0,1) and next_plan=2 THEN 1 ELSe NULL END) AS pro,
+  COUNT(CASE WHEN plan_id IN (0,1,2) and next_plan=3 THEN 1 ELSe NULL END) AS pro_anm,
+  COUNT(CASE WHEN plan_id IN(0,1,2,3) and next_plan=4 THEN 1 ELSe NULL END) AS churn
+FROM CTE
+)
 SELECT 
 ROUND((basic*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),2) as basic_perc,
 ROUND((pro*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),2) as pro_perc,
@@ -90,7 +108,8 @@ ROUND((pro_anm*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscri
 ROUND((churn*100.0)/(SELECT count(distinct customer_id) FROM foodie_fi.subscriptions),2) as churn_perc
 FROM count_cost;
 
----------------------
+Second Way:
+
 SELECT
 plan_id,
 count(distinct customer_id),
@@ -101,20 +120,22 @@ Group by 1
 
 
 7. What is the customer count and percentage breakdown of all 5 plan_name values at 2020-12-31?
+
 WITH latest_plan_cte AS
   (SELECT *,
           row_number() over(PARTITION BY customer_id
                             ORDER BY start_date DESC) AS latest_plan
    FROM foodie_fi.subscriptions
-   WHERE start_date <='2020-12-31' )
+   WHERE start_date <='2020-12-31'
+   )
 SELECT 
-plan_id,
-COUNT(Distinct customer_id) as customer_count,
-ROUND((COUNT(customer_id)*100.0)/(SELECT COUNT(distinct customer_id) FROM foodie_fi.subscriptions),2) as customer_perc
+  plan_id,
+  COUNT(Distinct customer_id) as customer_count,
+  ROUND((COUNT(customer_id)*100.0)/(SELECT COUNT(distinct customer_id) FROM foodie_fi.subscriptions),2) as customer_perc
 FROM
-latest_plan_cte
+  latest_plan_cte
 WHERE latest_plan=1
-GROUP BY 1
+  GROUP BY 1
 ORDER BY 3 desc;
 
 8.-- How many customers have upgraded to an annual plan in 2020?
@@ -127,33 +148,54 @@ FROM foodie_fi.subscriptions WHERE start_date<='2020-12-31'
 )
 SELECT plan_id,count(*) as annual_subscription FROM CTE WHERE rnk=1 and plan_id=3 GROUP BY 1
 
+----------------------------
 plan_id	annual_subscription
-3	195
+  3	            195
+----------------------------
 
 
 9.-- How many days on average does it take for a customer to an annual plan from the day they join Foodie-Fi?
 
-WITH CTE AS(
-SELECT customer_id,MIN(start_date) as joined_date
-FROM foodie_fi.subscriptions GROUP BY 2
+WITH CTE AS
+(
+SELECT 
+  customer_id,
+  MIN(start_date) as joined_date
+FROM foodie_fi.subscriptions
+  GROUP BY 2
 ),
-CTE1 AS(
-SELECT start_date as annual_date,customer_id
-FROM foodie_fi.subscriptions WHERE plan_id=3
+CTE1 AS
+(
+  SELECT 
+    start_date as annual_date,
+    customer_id
+  FROM foodie_fi.subscriptions
+    WHERE plan_id=3
 )
-SELECT AVG(annual_date-joined_date) as avg_date FROM 
-CTE INNER JOIN CTE1 using(customer_id)
+SELECT 
+  AVG(annual_date-joined_date) as avg_date
+ FROM CTE 
+  INNER JOIN CTE1
+ USING(customer_id)
 -------------------------------------------------------------------------------------
 10.-- Can you further breakdown this average value into 30 day periods (i.e. 0-30 days, 31-60 days etc)
 
 
-WITH CTE AS(
-SELECT customer_id,MIN(start_date) as joined_date
-FROM foodie_fi.subscriptions GROUP BY 1
+WITH CTE AS
+(
+  SELECT 
+    customer_id,
+    MIN(start_date) as joined_date
+  FROM foodie_fi.subscriptions 
+    GROUP BY 1
 ),
-CTE1 AS(
-SELECT start_date as annual_date,customer_id
-FROM foodie_fi.subscriptions WHERE plan_id=3
+CTE1 AS
+(
+  SELECT 
+    start_date as annual_date,
+    customer_id
+  FROM foodie_fi.subscriptions
+    WHERE plan_id=3
 )
 SELECT 
 COUNT(CASE WHEN (annual_date-joined_date) <=30 THEN 1 else NULL END) as first_30,
@@ -187,17 +229,18 @@ FROM days_30_interval
 GROUP BY 1
 ORDER BY 1;
 
-----------------------------------------------------------------------------
+
 11. How many customers downgraded from a pro monthly to a basic monthly plan in 2020?
 
 WITH CTE AS
 (
-SELECT *,
-  LEAD(plan_id) OVER(partition by customer_id order by start_date) as next_plan
-FROM foodie_fi.subscriptions WHERE 
-to_char(start_date,'YYYY')='2020' 
+  SELECT
+    *,
+    LEAD(plan_id) OVER(partition by customer_id order by start_date) as next_plan
+  FROM foodie_fi.subscriptions 
+  WHERE to_char(start_date,'YYYY')='2020' 
 )
 SELECT 
-count(*) as downgraded_customer
-FROM CTE WHERE next_plan=1 
-  and plan_id=2
+  count(*) as downgraded_customer
+FROM CTE 
+WHERE next_plan=1 and plan_id=2

@@ -1,0 +1,86 @@
+Case Study 4
+------------
+1. How many unique nodes are there on the Data Bank system?
+
+SELECT COUNT(DISTINCT node_id) as Unique_node_count FROM data_bank.customer_nodes;
+
+unique_node_count
+5
+
+
+2. What is the number of nodes per region?
+
+SELECT region_id,COUNT(node_id) as node_per_region FROM data_bank.customer_nodes GROUP BY 1;
+
+
+region_id	node_per_region
+1	5
+2	5
+3	5
+4	5
+5	5
+
+3. How many customers are allocated to each region?
+
+SELECT region_id,COUNT(DISTINCT customer_id) as customer_per_region FROM data_bank.customer_nodes GROUP BY 1;
+
+
+region_id	customer_per_region
+1	110
+2	105
+3	102
+4	95
+5	88
+
+4. How many days on average are customers reallocated to a different node?
+
+SELECT ROUND(AVG(end_date-start_date),2) FROM data_bank.customer_nodes WHERE end_date!='9999-12-31'
+
+round
+14.63
+
+OR 
+
+SELECT ROUND(AVG(end_date-start_date),2) FROM data_bank.customer_nodes
+
+round
+416373.41
+
+5.What is the median, 80th and 95th percentile for this same reallocation days metric for each region?
+
+a) Median
+SELECT region_id,PERCENTILE_CONT(0.50) WITHIN GROUP(order by end_date-start_date) FROM data_bank.customer_nodes WHERE end_date!='9999-12-31'
+GROUP BY 1
+
+region_id	percentile_cont
+1	15
+2	15
+3	15
+4	15
+5	15
+
+b) 80th Percentile
+
+SELECT region_id,PERCENTILE_CONT(0.80) WITHIN GROUP(order by end_date-start_date) FROM data_bank.customer_nodes WHERE end_date!='9999-12-31'
+GROUP BY 1
+
+region_id	percentile_cont
+1	23
+2	23
+3	24
+4	23
+5	24
+
+c) 95th Percentile
+
+region_id	percentile_cont
+1	28
+2	28
+3	28
+4	28
+5	28
+
+
+
+
+

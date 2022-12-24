@@ -1,0 +1,54 @@
+Case Study #8
+
+1. Update the fresh_segments.interest_metrics table by modifying the month_year column to be a date data type with the start of the month
+
+ALTER TABLE fresh_segments.interest_metrics
+ALTER column month_year type varchar(15);
+
+UPDATE fresh_segments.interest_metrics
+SET month_year = TO_DATE(month_year, 'MM-YYYY');
+
+ALTER TABLE fresh_segments.interest_metrics ALTER month_year TYPE date USING month_year::date;
+
+SELECT *
+FROM fresh_segments.interest_metrics
+ORDER BY ranking
+LIMIT 5;
+
+2. What is count of records in the fresh_segments.interest_metrics for each month_year value sorted in chronological order (earliest to latest) with the null values appearing first?
+
+SELECT TO_DATE(month_year,'MM-YYYY') as month_year,count(*) FROM fresh_segments.interest_metrics GROUP BY 1 order by 1 NULLS FIRST;
+
+3. What do you think we should do with these null values in the fresh_segments.interest_metrics
+I tried filling the values with forward and backward filling but it didn't work for consecutive null values, So At last I have to delete the data but there may be better solution for this as there is a significant amount(about 8%) of null data in the dataset.
+
+DELETE FROM fresh_segments.interest_metrics where month_year IS NULL;
+SELECT count(*) AS null_count
+FROM fresh_segments.interest_metrics
+WHERE month_year IS NULL;
+
+4.How many interest_id values exist in the fresh_segments.interest_metrics table but not in the fresh_segments.interest_map table? What about the other way around?
+
+WITH interest_id_not_in_metrics AS
+(
+SELECT distinct id FROM fresh_segments.interest_map
+EXCEPT
+SELECT distinct interest_id::integer
+FROM fresh_segments.interest_metrics
+),
+interest_id_not_in_map AS
+(
+SELECT distinct interest_id::integer FROM fresh_segments.interest_metrics
+EXCEPT
+SELECT distinct id
+FROM fresh_segments.interest_map
+)
+SELECT 
+COUNT(id) as not_in_metrics,
+(SELECT COUNT(interest_id) FROM interest_id_not_in_map)as not_in_map 
+FROM interest_id_not_in_metrics
+
+5.Summarise the id values in the fresh_segments.interest_map by its total record count in this table
+
+SELECT id,count(*) FROM fresh_segments.interest_map GROUP BY 1 Order by 2 desc 
+We can see that there are no id which is occuring more than once.

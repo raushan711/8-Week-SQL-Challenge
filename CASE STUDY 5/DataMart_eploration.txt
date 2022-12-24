@@ -1,0 +1,120 @@
+				Data Analysis
+Find the schema name from table name.
+SELECT table_schema FROM information_schema.tables where table_name = 'weekly_sales';
+
+NOTE: In these Querries, I have used my cleaned_data_table named cleaned_weekly_sales
+
+1.What day of the week is used for each week_date value?
+
+SELECT to_char(cleaned_week_date,'dd-mm-yyyy') as week_date
+,to_char(cleaned_week_date,'Day') as day FROM cleaned_weekly_sales
+
+date	day
+31-08-2020	Monday
+31-08-2020	Monday
+31-08-2020	Monday
+31-08-2020	Monday
+
+2. What range of week numbers are missing from the dataset?
+NOTE : HERE I have used on Recursive CTE 
+WITH RECURSIVE CTE AS(
+  (SELECT  1 AS week_name)
+  UNION ALL
+  (SELECT week_name+1 from CTE where week_name<52)
+  )
+SELECT * FROM CTE
+EXCEPT
+SELECT distinct EXTRACT(week from cleaned_week_date) as week_date FROM cleaned_weekly_sales
+order by week_name
+
+
+
+3. How many total transactions were there for each year in the dataset?
+
+SELECT year_num,SUM(transactions) as total_transaction FROM cleaned_weekly_sales GROUP BY 1 order by 1
+
+year_num	total_transaction
+2018	346406460
+2019	365639285
+2020	375813651
+
+4.What is the total sales for each region for each month?
+
+SELECT region,month_num,to_char(cleaned_week_date,'Month'),SUM(sales) FROM cleaned_weekly_sales
+GROUP BY 1,2,3 order by 1,2
+
+5. What is the total count of transactions for each platform
+
+SELECT platform,SUM(transactions) FROM cleaned_weekly_sales
+GROUP BY 1 order by 2
+
+platform	sum
+Shopify	5925169
+Retail	1081934227
+
+6. What is the percentage of sales for Retail vs Shopify for each month?
+
+SELECT month_num,
+ROUND((SUM( CASE when platform='Shopify' then sales END)*100.0)/SUM(sales),2) as shopify_sales_perc,
+ROUND((SUM( CASE when platform='Retail' then sales END)*100.0)/SUM(sales),2) as Retail_sales_perc
+ FROM cleaned_weekly_sales
+GROUP BY 1 order by 1
+
+month_num	shopify_sales_perc	retail_sales_perc
+3	2.46	97.54
+4	2.41	97.59
+5	2.70	97.30
+6	2.73	97.27
+7	2.71	97.29
+8	2.92	97.08
+9	2.62	97.38
+
+7. What is the percentage of sales by demographic for each year in the dataset?
+
+SELECT year_num,
+ROUND((SUM( CASE when demographic='Couples' then sales END)*100.0)/SUM(sales),2) as Couples_perc,
+ROUND((SUM( CASE when demographic='Families' then sales END)*100.0)/SUM(sales),2) as Families_perc,
+ROUND((SUM( CASE when demographic='unknown' then sales END)*100.0)/SUM(sales),2) as unknown_perc
+ FROM cleaned_weekly_sales
+GROUP BY 1 order by 1
+
+
+year_num	couples_perc	families_perc	unknown_perc
+2018	26.38	31.99	41.63
+2019	27.28	32.47	40.25
+2020	28.72	32.73	38.55
+
+
+8.
+
+SELECT age_band,demographic,SUM(sales) as sales_retail,
+ROUND((SUM(sales)*100.0)/(SELECT SUM(sales) FROM cleaned_weekly_sales),2) as retail_sale_perc
+ FROM cleaned_weekly_sales
+ WHERE platform='Retail'
+GROUP BY 1,2 order by 4 desc LIMIT 1
+
+age_band	demographic	  sales_retail	  retail_sale_perc
+unknown		  unknown		16067285533		39.44
+
+
+9. Can we use the avg_transaction column to find the average transaction size for each year for Retail vs Shopify? If not - how would you calculate it instead?
+
+SELECT year_num,platform,
+ROUND(AVG(avg_transaction),2) as avg_of_avg_transaction,
+ROUND(SUM(sales)::numeric/SUM(transactions),2) as avg_normal_transcation
+ FROM cleaned_weekly_sales 
+GROUP BY 1,2 
+ORDER BY 1,2
+
+
+
+year_num	platform	avg_of_avg_transaction	avg_normal_transcation
+2018	Retail	42.91	36.56
+2018	Shopify	188.28	192.48
+2019	Retail	41.97	36.83
+2019	Shopify	177.56	183.36
+2020	Retail	40.64	36.56
+2020	Shopify	174.87	179.03
+
+
+
